@@ -5,7 +5,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.DownloadProgressCallback
@@ -19,25 +18,32 @@ import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.launch
 import java.io.File
 
+private const val folderName = "youtube-dl"
+private const val TAG = "MainActivity"
 
 class MainActivity : AppCompatActivity(), DownloadProgressCallback {
 
-    // folder where downloaded files will be saved.
-    private val youtubeDLDir = File(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "youtubedl"
-    )
+    // folder where downloaded files will be saved
+
+    private val youtubeDLDir =
+        File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), folderName)
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         val extras = intent.extras
-        val value1 = extras?.getString(Intent.EXTRA_TEXT)
-        if (!value1.isNullOrEmpty()) {
-            textPath.setText(value1)
+        val contentUrl = extras?.getString(Intent.EXTRA_TEXT)
+
+        if (!contentUrl.isNullOrEmpty()) {
+            textUrl.setText(contentUrl)
         }
 
+        // initialize youtube-dl and ffmpeg
         YoutubeDL.getInstance().init(application)
         FFmpeg.getInstance().init(application);
+
+        // download start button
         btnDownload.setOnClickListener {
 
             Thread(Runnable {
@@ -51,25 +57,26 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         }
     }
 
-    private suspend fun update() {
-        Log.d("MainActivity" , "updating youtube-dl")
-        val dl = YoutubeDL.getInstance()
-        dl.updateYoutubeDL(application)
+    private fun update() {
+        Log.d(TAG, "updating youtube-dl")
+        YoutubeDL.getInstance().updateYoutubeDL(application)
     }
 
     private fun startDownload() {
-        val dlRequest = YoutubeDLRequest(textPath.text.toString())
-        //val videoInfo = YoutubeDL.getInstance().getInfo(textPath.text.toString())
+        val dlRequest = YoutubeDLRequest(textUrl.text.toString())
 
-        if (textPath.text.toString().contains("vk.com")) {
+
+        if (textUrl.text.toString().contains("vk.com")) {
             dlRequest.addOption("-u", "arshavin69ru@gmail.com")
             dlRequest.addOption("-p", "annanekdovA28")
         }
 
-        if(textPath.text.toString().contains("youtu")){
+        if (textUrl.text.toString().contains("youtu")) {
             dlRequest.addOption("-f", "bestvideo+bestaudio")
+        } else {
+            dlRequest.addOption("-f", "best")
         }
-        dlRequest.addOption("-f", "best")
+
         dlRequest.addOption("-o", youtubeDLDir.absolutePath + "/%(title)s.%(ext)s")
 
         try {
@@ -80,10 +87,10 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
                     videoInfo.title + "\n" + videoInfo.description + "\n" + videoInfo.duration
 
              */
-            Log.d("YOUTUBEDL " , "starting download")
+            Log.d(TAG, "starting download")
             YoutubeDL.getInstance().execute(dlRequest, this)
-            }catch (e: YoutubeDLException) {
-                Log.d("YOUTUBEDL " , e.message.toString())
+        } catch (e: YoutubeDLException) {
+            Log.d(TAG, e.message.toString())
         }
     }
 
