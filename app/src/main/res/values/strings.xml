@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">tubeapp</string>
+    <string name="url_text">paste a url here to download</string>
+    <string name="btnDownloadText">Download</string>
+</resources>
