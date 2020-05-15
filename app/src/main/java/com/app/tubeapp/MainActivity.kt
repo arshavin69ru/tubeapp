@@ -1,10 +1,12 @@
 package com.app.tubeapp
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -29,6 +31,7 @@ import java.io.File
 private const val folderName = "youtube-dl"
 private const val TAG = "MainActivity"
 private const val STORAGE_REQUEST_CODE = 39
+private const val PICK_MEDIA_DIRECTORY = 55
 
 class MainActivity : AppCompatActivity(), DownloadProgressCallback {
 
@@ -48,6 +51,7 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
             textUrl.setText(contentUrl)
         }
 
+        intentPickDirectory()
         // initialize youtube-dl and ffmpeg
         YoutubeDL.getInstance().init(application)
         FFmpeg.getInstance().init(application);
@@ -88,7 +92,8 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
                     }
                 }
             } else {
-                youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!, folderName)
+                youtubeDLDir =
+                    File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!, folderName)
                 Thread(Runnable {
                     startDownload()
                 }).start()
@@ -105,6 +110,26 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
 
     }
 
+    private fun intentPickDirectory() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+       // intent.addCategory(Intent.CATEGORY_OPENABLE)
+        startActivityForResult(intent, PICK_MEDIA_DIRECTORY)
+
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_MEDIA_DIRECTORY) {
+            if (resultCode == Activity.RESULT_OK) {
+                readUri(data?.data)
+            }
+        }
+    }
+
+    private fun readUri(uri : Uri?){
+        Log.d(TAG, uri?.toString())
+
+    }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -114,7 +139,8 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == STORAGE_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!, folderName)
+                youtubeDLDir =
+                    File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!, folderName)
                 Toast.makeText(
                     this,
                     "Permission was granted starting the download",
