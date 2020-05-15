@@ -1,11 +1,19 @@
 package com.app.tubeapp
 
+import android.Manifest
+import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.DownloadProgressCallback
 import com.yausername.youtubedl_android.YoutubeDL
@@ -20,18 +28,19 @@ import java.io.File
 
 private const val folderName = "youtube-dl"
 private const val TAG = "MainActivity"
+private const val STORAGE_REQUEST_CODE = 39
 
 class MainActivity : AppCompatActivity(), DownloadProgressCallback {
 
     // folder where downloaded files will be saved
 
-    private val youtubeDLDir =
-        File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), folderName)
+    private lateinit var youtubeDLDir: File
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         val extras = intent.extras
         val contentUrl = extras?.getString(Intent.EXTRA_TEXT)
 
@@ -43,16 +52,86 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         YoutubeDL.getInstance().init(application)
         FFmpeg.getInstance().init(application);
 
+
         // download start button
         btnDownload.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(
+                        this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    )
+                ) {
 
-            Thread(Runnable {
-                startDownload()
-            }).start()
+                    val alertDialog = AlertDialog.Builder(this)
+                    alertDialog.setTitle("Allow Permission to read storage").setMessage(
+                        "We need access to storage in order to save" +
+                                "downloaded files."
+                    ).setPositiveButton("OK", DialogInterface.OnClickListener { dialog, which ->
+                        dialog.dismiss()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            requestPermissions(
+                                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                                STORAGE_REQUEST_CODE
+                            )
+                        }
+                    })
+                } else {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        requestPermissions(
+                            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                            STORAGE_REQUEST_CODE
+                        )
+                    }
+                }
+            } else {
+                youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!, folderName)
+                Thread(Runnable {
+                    startDownload()
+                }).start()
+            }
+
+
         }
         btnUpdate.setOnClickListener {
             CoroutineScope(IO).launch {
                 update()
+            }
+        }
+
+
+    }
+
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == STORAGE_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!, folderName)
+                Toast.makeText(
+                    this,
+                    "Permission was granted starting the download",
+                    Toast.LENGTH_SHORT
+
+                ).show()
+                // permission was granted, do something with it
+                Thread(Runnable {
+                    startDownload()
+                }).start()
+            } else {
+                // permission was not granted, do nothing
+                Toast.makeText(
+                    this,
+                    "No permission granted, the app will not work normally",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -77,7 +156,7 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
             dlRequest.addOption("-f", "best")
         }
 
-        dlRequest.addOption("-o", youtubeDLDir.absolutePath + "/%(title)s.%(ext)s")
+        dlRequest.addOption("-o", youtubeDLDir?.absolutePath + "/%(title)s.%(ext)s")
 
         try {
             /*
