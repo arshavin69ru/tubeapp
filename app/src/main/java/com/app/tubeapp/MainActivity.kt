@@ -2,7 +2,6 @@ package com.app.tubeapp
 
 import android.Manifest
 import android.app.Activity
-import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,7 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -32,90 +31,107 @@ private const val folderName = "youtube-dl"
 private const val TAG = "MainActivity"
 private const val STORAGE_REQUEST_CODE = 39
 private const val PICK_MEDIA_DIRECTORY = 55
+private const val SAVE_MEDIA = 58
+private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
 
 class MainActivity : AppCompatActivity(), DownloadProgressCallback {
-
+    // monitor permission for storage access
+    private var permissionStatus = false
     // folder where downloaded files will be saved
 
     private lateinit var youtubeDLDir: File
+    private lateinit var selectedDir: Uri
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val extras = intent.extras
-        val contentUrl = extras?.getString(Intent.EXTRA_TEXT)
+        // check if we have any shared video link
+        textUrl.setText(if (catchVideoLink() != null) catchVideoLink() else "")
 
-        if (!contentUrl.isNullOrEmpty()) {
-            textUrl.setText(contentUrl)
-        }
-
-        intentPickDirectory()
-        // initialize youtube-dl and ffmpeg
+        // initialize youtube-dl and FFMPEG
         YoutubeDL.getInstance().init(application)
-        FFmpeg.getInstance().init(application);
+        FFmpeg.getInstance().init(application)
 
+        @RequiresApi(Build.VERSION_CODES.M)
+        if (!checkPermission()) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, PERMISSION_WRITE)) {
+                showCustomDialog(
+                    getString(R.string.perm_storage_title),
+                    getString(R.string.perm_storage_message)
+                ).setPositiveButton("OK", DialogInterface.OnClickListener { dialog, _ ->
+                    dialog.dismiss()
+                    requestPermissions(kotlin.arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
+                }).show()
+
+            } else {
+                requestPermissions(arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
+            }
+        } else {
+            permissionStatus = true
+        }
 
         // download start button
         btnDownload.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(
-                        this,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    )
-                ) {
-
-                    val alertDialog = AlertDialog.Builder(this)
-                    alertDialog.setTitle("Allow Permission to read storage").setMessage(
-                        "We need access to storage in order to save" +
-                                "downloaded files."
-                    ).setPositiveButton("OK", DialogInterface.OnClickListener { dialog, which ->
-                        dialog.dismiss()
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            requestPermissions(
-                                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                                STORAGE_REQUEST_CODE
-                            )
-                        }
-                    })
-                } else {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        requestPermissions(
-                            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                            STORAGE_REQUEST_CODE
-                        )
-                    }
-                }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), folderName)
             } else {
-                youtubeDLDir =
-                    File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!, folderName)
-                Thread(Runnable {
-                    startDownload()
-                }).start()
+                if (permissionStatus) {
+                    youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), folderName)
+                }
             }
 
-
+            startDownload()
         }
+
         btnUpdate.setOnClickListener {
             CoroutineScope(IO).launch {
                 update()
             }
         }
-
-
     }
 
+    /**
+     * check permission
+     */
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun checkPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, PERMISSION_WRITE) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * Grab media url from other applications, using share button
+     * @return: media url
+     */
+    private fun catchVideoLink(): String? {
+        val extras = intent.extras
+        return extras?.getString(Intent.EXTRA_TEXT)
+    }
+
+    /**
+     * show alert dialog for permission
+     * and ask for permission if android version
+     */
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun showCustomDialog(title: String, message: String): AlertDialog.Builder {
+        val alertDialog = AlertDialog.Builder(this)
+        return alertDialog
+            .setTitle(title)
+            .setMessage(message)
+    }
+
+    /**
+     * Pick a directory with system picker where we want to store the downloaded
+     * media content.
+     */
     private fun intentPickDirectory() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-       // intent.addCategory(Intent.CATEGORY_OPENABLE)
+        // intent.addCategory(Intent.CATEGORY_OPENABLE)
         startActivityForResult(intent, PICK_MEDIA_DIRECTORY)
 
     }
+
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -126,8 +142,17 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         }
     }
 
-    private fun readUri(uri : Uri?){
-        Log.d(TAG, uri?.toString())
+    /**
+     * Create a file in destination folder using storage access framework
+     */
+    private fun createFile() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+        startActivityForResult(intent, SAVE_MEDIA)
+    }
+
+    private fun readUri(uri: Uri?) {
+        Log.d(TAG, uri.toString())
+        selectedDir = uri!!
 
     }
 
@@ -138,27 +163,7 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == STORAGE_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                youtubeDLDir =
-                    File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!, folderName)
-                Toast.makeText(
-                    this,
-                    "Permission was granted starting the download",
-                    Toast.LENGTH_SHORT
-
-                ).show()
-                // permission was granted, do something with it
-                Thread(Runnable {
-                    startDownload()
-                }).start()
-            } else {
-                // permission was not granted, do nothing
-                Toast.makeText(
-                    this,
-                    "No permission granted, the app will not work normally",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+            permissionStatus = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
         }
     }
 
@@ -168,56 +173,76 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
     }
 
     private fun startDownload() {
-        val dlRequest = YoutubeDLRequest(textUrl.text.toString())
+        Thread(Runnable {
+            if (textUrl.text.toString().isEmpty()) {
+                Log.d(TAG, "hit empty editText")
+                return@Runnable
+            }
 
+            val dlRequest = YoutubeDLRequest(textUrl.text.toString())
 
-        if (textUrl.text.toString().contains("vk.com")) {
-            dlRequest.addOption("-u", "arshavin69ru@gmail.com")
-            dlRequest.addOption("-p", "annanekdovA28")
-        }
-
-        if (textUrl.text.toString().contains("youtu")) {
-            dlRequest.addOption("-f", "bestvideo+bestaudio")
-        } else {
-            dlRequest.addOption("-f", "best")
-        }
-
-        dlRequest.addOption("-o", youtubeDLDir?.absolutePath + "/%(title)s.%(ext)s")
-
-        try {
             /*
-            runOnUiThread {
+            try {
+                val url = URL(thumbnail.url)
+                val image: Bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+                runOnUiThread {
+                    thumnail.setImageBitmap(image)
+                }
 
-                textInfo.text =
-                    videoInfo.title + "\n" + videoInfo.description + "\n" + videoInfo.duration
+            } catch (e: IOException) {
+                System.out.println(e)
+            }
 
              */
-            Log.d(TAG, "starting download")
-            YoutubeDL.getInstance().execute(dlRequest, this)
-        } catch (e: YoutubeDLException) {
-            Log.d(TAG, e.message.toString())
-        }
+
+            if (textUrl.text.toString().contains("vk.com")) {
+                dlRequest.addOption("-u", "arshavin69ru@gmail.com")
+                dlRequest.addOption("-p", "annanekdovA28")
+            }
+
+            if (textUrl.text.toString().contains("youtu")) {
+
+                dlRequest.addOption("-f", FormatType.BESTVIDEOAUDIO.format)
+
+            } else {
+                dlRequest.addOption(
+                    "-f",
+                    FormatType.BEST.format
+                ) // notice how we access the value of the string
+            }
+
+            dlRequest.addOption("-o", youtubeDLDir.absolutePath + "/%(title)s.%(ext)s")
+
+            try {
+                /*
+                runOnUiThread {
+
+                    textInfo.text =
+                        videoInfo.title + "\n" + videoInfo.description + "\n" + videoInfo.duration
+
+                 */
+                Log.d(TAG, "starting download....")
+                YoutubeDL.getInstance().execute(dlRequest, this)
+            } catch (e: YoutubeDLException) {
+                Log.d(TAG, e.message.toString())
+            }
+        }).start()
     }
 
     override fun onProgressUpdate(progress: Float, etaInSeconds: Long) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            runOnUiThread {
+        val hour = etaInSeconds / 3600
+        val min = (etaInSeconds % 3600) / 60
+        val sec = etaInSeconds % 60
 
-                completed.text = "$progress% Done"
-                progressBar.setProgress(progress.toInt(), true)
+        val timeString =
+            String.format("%02d hr %02d min %02d sec remaining", hour, min, sec)
 
-                val hour = etaInSeconds / 3600
-                val min = (etaInSeconds % 3600) / 60
-                val sec = etaInSeconds % 60
-
-                val timeString =
-                    String.format("%02d hr %02d min %02d sec remaining", hour, min, sec)
-
-                etaText.text = timeString
-
-
-            }
+        runOnUiThread {
+            completed.text = "$progress% Done"
+            progressBar.progress = progress.toInt()
+            etaText.text = timeString
         }
+
     }
 }
 
