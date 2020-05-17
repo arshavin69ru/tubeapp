@@ -21,10 +21,8 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.Runnable
-import kotlinx.coroutines.launch
 import java.io.File
 
 private const val folderName = "youtube-dl"
@@ -37,16 +35,21 @@ private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
 class MainActivity : AppCompatActivity(), DownloadProgressCallback {
     // monitor permission for storage access
     private var permissionStatus = false
-    // folder where downloaded files will be saved
 
+    // folder where downloaded files will be saved
+    private var downloadProgressCallback: DownloadProgressCallback = this
     private lateinit var youtubeDLDir: File
     private lateinit var selectedDir: Uri
-
+    private lateinit var activityViewModel: MainActivityViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        activityViewModel = MainActivityViewModel()
+
+        // activityViewModel instance will observe lifecycle events of this lifecycle owner(MainActivity)
+        lifecycle.addObserver(activityViewModel)
         // check if we have any shared video link
         textUrl.setText(if (catchVideoLink() != null) catchVideoLink() else "")
 
@@ -82,7 +85,11 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
                 }
             }
 
-            startDownload()
+            runBlocking {
+                launch(IO){
+                    startDownload()
+                }
+            }
         }
 
         btnUpdate.setOnClickListener {
@@ -172,61 +179,64 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         YoutubeDL.getInstance().updateYoutubeDL(application)
     }
 
-    private fun startDownload() {
-        Thread(Runnable {
-            if (textUrl.text.toString().isEmpty()) {
-                Log.d(TAG, "hit empty editText")
-                return@Runnable
+    private suspend fun startDownload() {
+
+        if (textUrl.text.toString().isEmpty()) {
+            Log.d(TAG, "hit empty editText")
+            return
+        }
+
+        val dlRequest = YoutubeDLRequest(textUrl.text.toString())
+
+        /*
+        try {
+            val url = URL(thumbnail.url)
+            val image: Bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+            runOnUiThread {
+                thumnail.setImageBitmap(image)
             }
 
-            val dlRequest = YoutubeDLRequest(textUrl.text.toString())
+        } catch (e: IOException) {
+            System.out.println(e)
+        }
 
+         */
+
+        if (textUrl.text.toString().contains("vk.com")) {
+            dlRequest.addOption("-u", "arshavin69ru@gmail.com")
+            dlRequest.addOption("-p", "annanekdovA28")
+        }
+
+        if (textUrl.text.toString().contains("youtu")) {
+
+            dlRequest.addOption("-f", FormatType.BESTVIDEOAUDIO.format)
+
+        } else {
+            dlRequest.addOption(
+                "-f",
+                FormatType.BEST.format
+            ) // notice how we access the value of the string
+        }
+
+        dlRequest.addOption("-o", youtubeDLDir.absolutePath + "/%(title)s.%(ext)s")
+
+
+        try {
             /*
-            try {
-                val url = URL(thumbnail.url)
-                val image: Bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream())
-                runOnUiThread {
-                    thumnail.setImageBitmap(image)
-                }
+            runOnUiThread {
 
-            } catch (e: IOException) {
-                System.out.println(e)
-            }
+                textInfo.text =
+                    videoInfo.title + "\n" + videoInfo.description + "\n" + videoInfo.duration
 
              */
 
-            if (textUrl.text.toString().contains("vk.com")) {
-                dlRequest.addOption("-u", "arshavin69ru@gmail.com")
-                dlRequest.addOption("-p", "annanekdovA28")
-            }
+            Log.d(TAG, "starting download....")
+            YoutubeDL.getInstance().execute(dlRequest, downloadProgressCallback)
+        } catch (e: YoutubeDLException) {
+            Log.d(TAG, e.message.toString())
+        }
 
-            if (textUrl.text.toString().contains("youtu")) {
 
-                dlRequest.addOption("-f", FormatType.BESTVIDEOAUDIO.format)
-
-            } else {
-                dlRequest.addOption(
-                    "-f",
-                    FormatType.BEST.format
-                ) // notice how we access the value of the string
-            }
-
-            dlRequest.addOption("-o", youtubeDLDir.absolutePath + "/%(title)s.%(ext)s")
-
-            try {
-                /*
-                runOnUiThread {
-
-                    textInfo.text =
-                        videoInfo.title + "\n" + videoInfo.description + "\n" + videoInfo.duration
-
-                 */
-                Log.d(TAG, "starting download....")
-                YoutubeDL.getInstance().execute(dlRequest, this)
-            } catch (e: YoutubeDLException) {
-                Log.d(TAG, e.message.toString())
-            }
-        }).start()
     }
 
     override fun onProgressUpdate(progress: Float, etaInSeconds: Long) {
