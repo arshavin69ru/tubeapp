@@ -4,4 +4,5 @@
     <string name="btnDownloadText">Download</string>
     <string name="perm_storage_title">Read Storage</string>
     <string name="perm_storage_message">We need access to storage in order to save downloaded files.</string>
+    <string name="login">In order to download this video, you must login to your vk account.</string>
 </resources>

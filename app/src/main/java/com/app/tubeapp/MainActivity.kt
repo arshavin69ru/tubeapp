@@ -2,6 +2,7 @@ package com.app.tubeapp
 
 import android.Manifest
 import android.app.Activity
+import android.app.Application
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -16,14 +17,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.yausername.ffmpeg.FFmpeg
-import com.yausername.youtubedl_android.DownloadProgressCallback
-import com.yausername.youtubedl_android.YoutubeDL
-import com.yausername.youtubedl_android.YoutubeDLException
-import com.yausername.youtubedl_android.YoutubeDLRequest
+import com.yausername.youtubedl_android.*
+import com.yausername.youtubedl_android.utils.YoutubeDLUtils
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.toolbar_main.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import java.io.File
+import kotlin.coroutines.CoroutineContext
 
 private const val folderName = "youtube-dl"
 private const val TAG = "MainActivity"
@@ -35,7 +36,6 @@ private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
 class MainActivity : AppCompatActivity(), DownloadProgressCallback {
     // monitor permission for storage access
     private var permissionStatus = false
-
     // folder where downloaded files will be saved
     private var downloadProgressCallback: DownloadProgressCallback = this
     private lateinit var youtubeDLDir: File
@@ -46,6 +46,8 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        setSupportActionBar(mainToolbar)
+
         activityViewModel = MainActivityViewModel()
 
         // activityViewModel instance will observe lifecycle events of this lifecycle owner(MainActivity)
@@ -53,7 +55,7 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         // check if we have any shared video link
         textUrl.setText(if (catchVideoLink() != null) catchVideoLink() else "")
 
-        // initialize youtube-dl and FFMPEG
+        // initialize youtube-dl and ffmpeg
         YoutubeDL.getInstance().init(application)
         FFmpeg.getInstance().init(application)
 
@@ -85,10 +87,13 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
                 }
             }
 
-            runBlocking {
-                launch(IO){
-                    startDownload()
-                }
+//            val fragment = VkLoginFragment()
+//            fragment.show(supportFragmentManager.beginTransaction(), "dialog")
+//            var result  : String? = null
+
+            CoroutineScope(IO).launch{
+                startDownload()
+                Log.d("Scope ", "Finished")
             }
         }
 
@@ -135,6 +140,7 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
     private fun intentPickDirectory() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
         // intent.addCategory(Intent.CATEGORY_OPENABLE)
+        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         startActivityForResult(intent, PICK_MEDIA_DIRECTORY)
 
     }
@@ -179,12 +185,14 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         YoutubeDL.getInstance().updateYoutubeDL(application)
     }
 
-    private suspend fun startDownload() {
+    private suspend fun startDownload() : String {
 
         if (textUrl.text.toString().isEmpty()) {
             Log.d(TAG, "hit empty editText")
-            return
+            return ""
         }
+
+        var error : String? = null
 
         val dlRequest = YoutubeDLRequest(textUrl.text.toString())
 
@@ -202,10 +210,10 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
 
          */
 
-        if (textUrl.text.toString().contains("vk.com")) {
-            dlRequest.addOption("-u", "arshavin69ru@gmail.com")
-            dlRequest.addOption("-p", "annanekdovA28")
-        }
+//        if (textUrl.text.toString().contains("vk.com")) {
+//            dlRequest.addOption("-u", "arshavin69ru@gmail.com")
+//            dlRequest.addOption("-p", "annanekdovA28")
+//        }
 
         if (textUrl.text.toString().contains("youtu")) {
 
@@ -218,7 +226,8 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
             ) // notice how we access the value of the string
         }
 
-        dlRequest.addOption("-o", youtubeDLDir.absolutePath + "/%(title)s.%(ext)s")
+        dlRequest.addOption(YoutubeDownloader.Options.OUTPUT.option, youtubeDLDir.absolutePath + YoutubeDownloader.FileNames.TITLE_EXT.title)
+        dlRequest.addOption("")
 
 
         try {
@@ -231,12 +240,13 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
              */
 
             Log.d(TAG, "starting download....")
-            YoutubeDL.getInstance().execute(dlRequest, downloadProgressCallback)
+            error = YoutubeDL.getInstance().execute(dlRequest, downloadProgressCallback).out
+            Log.d("Error", error)
         } catch (e: YoutubeDLException) {
             Log.d(TAG, e.message.toString())
         }
 
-
+        return error!!
     }
 
     override fun onProgressUpdate(progress: Float, etaInSeconds: Long) {
