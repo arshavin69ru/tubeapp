@@ -2,8 +2,6 @@ package com.app.tubeapp
 
 import android.Manifest
 import android.app.Activity
-import android.app.Application
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -16,15 +14,19 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
 import com.yausername.ffmpeg.FFmpeg
-import com.yausername.youtubedl_android.*
-import com.yausername.youtubedl_android.utils.YoutubeDLUtils
+import com.yausername.youtubedl_android.YoutubeDL
+import com.yausername.youtubedl_android.mapper.VideoInfo
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.toolbar_main.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.coroutines.CoroutineContext
 
 private const val folderName = "youtube-dl"
 private const val TAG = "MainActivity"
@@ -33,49 +35,72 @@ private const val PICK_MEDIA_DIRECTORY = 55
 private const val SAVE_MEDIA = 58
 private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
 
-class MainActivity : AppCompatActivity(), DownloadProgressCallback {
+class MainActivity : AppCompatActivity(), LifecycleOwner {
     // monitor permission for storage access
     private var permissionStatus = false
+
     // folder where downloaded files will be saved
-    private var downloadProgressCallback: DownloadProgressCallback = this
+    private var downloadUrl: String? = null
     private lateinit var youtubeDLDir: File
     private lateinit var selectedDir: Uri
     private lateinit var activityViewModel: MainActivityViewModel
-
+    private lateinit var activity: MainActivity
+    private var videoInfo: LiveData<VideoInfo>? = null
+    private lateinit var job: Job
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         setSupportActionBar(mainToolbar)
 
         activityViewModel = MainActivityViewModel()
-
-        // activityViewModel instance will observe lifecycle events of this lifecycle owner(MainActivity)
         lifecycle.addObserver(activityViewModel)
-        // check if we have any shared video link
-        textUrl.setText(if (catchVideoLink() != null) catchVideoLink() else "")
 
         // initialize youtube-dl and ffmpeg
         YoutubeDL.getInstance().init(application)
         FFmpeg.getInstance().init(application)
 
+
+        // activityViewModel instance will observe lifecycle events of this lifecycle owner(MainActivity)
+
+
+        // check if we have any shared video link
+
+        downloadUrl = if (catchVideoLink() != null) catchVideoLink() else ""
+        Log.d("MainActivity", downloadUrl!!)
+
         @RequiresApi(Build.VERSION_CODES.M)
-        if (!checkPermission()) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, PERMISSION_WRITE)) {
+        if (!checkPermission()) { // we have no permission enter here
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, PERMISSION_WRITE)) { // if user denied perm
                 showCustomDialog(
                     getString(R.string.perm_storage_title),
                     getString(R.string.perm_storage_message)
-                ).setPositiveButton("OK", DialogInterface.OnClickListener { dialog, _ ->
+                ).setPositiveButton("OK") { dialog, _ ->
                     dialog.dismiss()
                     requestPermissions(kotlin.arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
-                }).show()
+                }.show()
 
-            } else {
+            } else { // user didn't deny , just ask for permission
                 requestPermissions(arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
             }
-        } else {
+        } else { // we already have permission
+
             permissionStatus = true
+
+            if (downloadUrl.isNullOrEmpty())
+                return
+
+
+
+
+            Log.d("Main", "has observers")
+            activityViewModel.getVideoInfo(downloadUrl!!)?.observe(this, Observer {
+                Log.d("setting text", it.title)
+                etaText.text = it.title
+            })
         }
+
 
         // download start button
         btnDownload.setOnClickListener {
@@ -91,10 +116,6 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
 //            fragment.show(supportFragmentManager.beginTransaction(), "dialog")
 //            var result  : String? = null
 
-            CoroutineScope(IO).launch{
-                startDownload()
-                Log.d("Scope ", "Finished")
-            }
         }
 
         btnUpdate.setOnClickListener {
@@ -185,85 +206,21 @@ class MainActivity : AppCompatActivity(), DownloadProgressCallback {
         YoutubeDL.getInstance().updateYoutubeDL(application)
     }
 
-    private suspend fun startDownload() : String {
-
-        if (textUrl.text.toString().isEmpty()) {
-            Log.d(TAG, "hit empty editText")
-            return ""
-        }
-
-        var error : String? = null
-
-        val dlRequest = YoutubeDLRequest(textUrl.text.toString())
-
-        /*
-        try {
-            val url = URL(thumbnail.url)
-            val image: Bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream())
-            runOnUiThread {
-                thumnail.setImageBitmap(image)
-            }
-
-        } catch (e: IOException) {
-            System.out.println(e)
-        }
-
-         */
-
-//        if (textUrl.text.toString().contains("vk.com")) {
-//            dlRequest.addOption("-u", "arshavin69ru@gmail.com")
-//            dlRequest.addOption("-p", "annanekdovA28")
+//    override fun onProgressUpdate(progress: Float, etaInSeconds: Long) {
+//        val hour = etaInSeconds / 3600
+//        val min = (etaInSeconds % 3600) / 60
+//        val sec = etaInSeconds % 60
+//
+//        val timeString =
+//            String.format("%02d hr %02d min %02d sec remaining", hour, min, sec)
+//
+//        runOnUiThread {
+//            completed.text = "$progress% Done"
+//            progressBar.progress = progress.toInt()
+//            etaText.text = timeString
 //        }
-
-        if (textUrl.text.toString().contains("youtu")) {
-
-            dlRequest.addOption("-f", FormatType.BESTVIDEOAUDIO.format)
-
-        } else {
-            dlRequest.addOption(
-                "-f",
-                FormatType.BEST.format
-            ) // notice how we access the value of the string
-        }
-
-        dlRequest.addOption(YoutubeDownloader.Options.OUTPUT.option, youtubeDLDir.absolutePath + YoutubeDownloader.FileNames.TITLE_EXT.title)
-        dlRequest.addOption("")
-
-
-        try {
-            /*
-            runOnUiThread {
-
-                textInfo.text =
-                    videoInfo.title + "\n" + videoInfo.description + "\n" + videoInfo.duration
-
-             */
-
-            Log.d(TAG, "starting download....")
-            error = YoutubeDL.getInstance().execute(dlRequest, downloadProgressCallback).out
-            Log.d("Error", error)
-        } catch (e: YoutubeDLException) {
-            Log.d(TAG, e.message.toString())
-        }
-
-        return error!!
-    }
-
-    override fun onProgressUpdate(progress: Float, etaInSeconds: Long) {
-        val hour = etaInSeconds / 3600
-        val min = (etaInSeconds % 3600) / 60
-        val sec = etaInSeconds % 60
-
-        val timeString =
-            String.format("%02d hr %02d min %02d sec remaining", hour, min, sec)
-
-        runOnUiThread {
-            completed.text = "$progress% Done"
-            progressBar.progress = progress.toInt()
-            etaText.text = timeString
-        }
-
-    }
+//
+//    }
 }
 
 
