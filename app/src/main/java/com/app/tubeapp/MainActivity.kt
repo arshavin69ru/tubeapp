@@ -9,6 +9,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -17,7 +20,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
-import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.mapper.VideoInfo
 import kotlinx.android.synthetic.main.activity_main.*
@@ -34,13 +36,14 @@ private const val STORAGE_REQUEST_CODE = 39
 private const val PICK_MEDIA_DIRECTORY = 55
 private const val SAVE_MEDIA = 58
 private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
-
+var downloadUrl: String? = null
 class MainActivity : AppCompatActivity(), LifecycleOwner {
     // monitor permission for storage access
     private var permissionStatus = false
+    private val TAG: String = this.javaClass.name
 
     // folder where downloaded files will be saved
-    private var downloadUrl: String? = null
+
     private lateinit var youtubeDLDir: File
     private lateinit var selectedDir: Uri
     private lateinit var activityViewModel: MainActivityViewModel
@@ -57,16 +60,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         activityViewModel = MainActivityViewModel()
         lifecycle.addObserver(activityViewModel)
 
-        // initialize youtube-dl and ffmpeg
-        YoutubeDL.getInstance().init(application)
-        FFmpeg.getInstance().init(application)
-
-
-        // activityViewModel instance will observe lifecycle events of this lifecycle owner(MainActivity)
-
-
-        // check if we have any shared video link
-
         downloadUrl = if (catchVideoLink() != null) catchVideoLink() else ""
         Log.d("MainActivity", downloadUrl!!)
 
@@ -78,31 +71,22 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                     getString(R.string.perm_storage_message)
                 ).setPositiveButton("OK") { dialog, _ ->
                     dialog.dismiss()
-                    requestPermissions(kotlin.arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
+                    requestPermissions(arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
                 }.show()
 
             } else { // user didn't deny , just ask for permission
                 requestPermissions(arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
             }
         } else { // we already have permission
-
             permissionStatus = true
-
-            if (downloadUrl.isNullOrEmpty())
-                return
-
-
-
-
-            Log.d("Main", "has observers")
-            activityViewModel.getVideoInfo(downloadUrl!!)?.observe(this, Observer {
-                Log.d("setting text", it.title)
-                etaText.text = it.title
-            })
         }
 
+//        Log.d("MainActivity", "starting task")
+//        activityViewModel.getVideoInfo(downloadUrl!!, application)?.observe(this, Observer {
+//            etaText.text = "Title: ${it.title}\nThumbnail:${it.thumbnail}\n"
+//        })
 
-        // download start button
+
         btnDownload.setOnClickListener {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
                 youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), folderName)
@@ -112,23 +96,39 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                 }
             }
 
+
 //            val fragment = VkLoginFragment()
 //            fragment.show(supportFragmentManager.beginTransaction(), "dialog")
-//            var result  : String? = null
+//            var result: String? = null
+            val fragment = VideoDownloadFragment()
+            fragment.show(supportFragmentManager.beginTransaction(), "dialog")
 
         }
 
         btnUpdate.setOnClickListener {
-            CoroutineScope(IO).launch {
-                update()
-            }
+//            CoroutineScope(IO).launch {
+//                update()
+//            }
+            val fragment = VideoDownloadFragment()
+            fragment.show(supportFragmentManager.beginTransaction(), "dialog")
         }
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.activity_menu, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.setting) {
+            Toast.makeText(this, "hello", Toast.LENGTH_LONG)
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     /**
-     * check permission
+     * check for permission on android M+
      */
-    @RequiresApi(Build.VERSION_CODES.M)
     private fun checkPermission(): Boolean {
         return ContextCompat.checkSelfPermission(this, PERMISSION_WRITE) == PackageManager.PERMISSION_GRANTED
     }

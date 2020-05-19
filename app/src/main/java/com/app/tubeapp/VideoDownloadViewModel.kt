@@ -11,13 +11,14 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import com.yausername.youtubedl_android.mapper.VideoInfo
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainActivityViewModel : ViewModel(), LifecycleObserver {
-    private val TAG: String = this.javaClass.name
+class VideoDownloadViewModel : ViewModel(), LifecycleObserver {
+    // TODO: Implement the ViewModel
 
+    private val TAG : String = javaClass.name
     private var videoInfo: MutableLiveData<VideoInfo>? = null
 
 //    suspend fun startDownload(url: String) {
@@ -65,9 +66,9 @@ class MainActivityViewModel : ViewModel(), LifecycleObserver {
         val dlRequest = YoutubeDLRequest(urlString)
         var info: VideoInfo? = null
 
-        CoroutineScope(IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             Log.d(TAG, "grabvideo coroutine context " + this.coroutineContext)
-            withContext(IO) {
+            withContext(Dispatchers.IO) {
                 Log.d(TAG, "inside with context " + Thread.currentThread().name)
                 info = YoutubeDL.getInstance().getInfo(dlRequest)
             }
@@ -77,6 +78,3 @@ class MainActivityViewModel : ViewModel(), LifecycleObserver {
         }
     }
 }
-
-
-

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".VideoDownloadFragment">
+
+    <TextView
+        android:id="@+id/txtHeader"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="8dp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center_horizontal"
+        android:text="Video Details"
+        android:textColor="#A323DE"
+        android:textSize="26sp" />
+
+    <TextView
+        android:id="@+id/txtVidTitle"
+        style="@style/CustomTextBox"
+        android:layout_below="@+id/txtHeader"
+        android:layout_alignTop="@+id/txtHeader"
+        android:layout_marginTop="45dp"
+        android:layout_marginBottom="16dp"
+        android:text="Title" />
+
+    <TextView
+        android:id="@+id/txtDemo"
+        style="@style/CustomTextBox"
+        android:layout_below="@+id/txtVidTitle"
+        android:layout_marginBottom="16dp"
+        android:text="Demo" />
+
+    <TextView
+        android:id="@+id/txtDemo1"
+        style="@style/CustomTextBox"
+        android:layout_below="@+id/txtDemo"
+        android:layout_marginBottom="16dp"
+        android:text="Demo" />
+
+    <ImageView
+        android:id="@+id/imgThumbnail"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/txtDemo1"
+        android:layout_margin="8dp"
+        android:contentDescription="TODO"
+        android:src="@drawable/ic_launcher_foreground" />
+
+    <Button
+        android:id="@+id/downloadVideo"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/imgThumbnail"
+        android:layout_margin="8dp"
+        android:text="Download"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp" />
+
+
+</RelativeLayout>

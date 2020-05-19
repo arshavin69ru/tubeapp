@@ -30,5 +30,4 @@ class VkLoginFragment : DialogFragment() , LifecycleOwner{
         lifecycle.addObserver(viewModel)
         // TODO: Use the ViewModel
     }
-
 }
