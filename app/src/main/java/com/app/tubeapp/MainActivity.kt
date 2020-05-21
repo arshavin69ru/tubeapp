@@ -19,17 +19,15 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.app.tubeapp.models.DownloadProgress
+import com.app.tubeapp.models.YDownloader
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main.view.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val folderName = "youtube-dl"
@@ -214,15 +212,14 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
         YoutubeDL.getInstance().updateYoutubeDL(application)
     }
 
-    override fun startDownload() {
+    override fun startDownload(){
         val transaction = supportFragmentManager.beginTransaction()
         transaction.remove(supportFragmentManager.findFragmentByTag("dialog")!!).commit()
-
         CoroutineScope(IO).launch {
 //            activityViewModel.download(activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!.absolutePath)
 //            runOnUiThread {
 //                etaText.text = downloadProgress!!.progress.toString()
-//            }
+//
             CoroutineScope(IO).launch {
                 val request = YoutubeDLRequest(downloadUrl)
                 val dir = "${activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!.absolutePath}/youtube-dl/%(title)s.%(ext)s"

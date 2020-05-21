@@ -1,4 +1,4 @@
-package com.app.tubeapp
+package com.app.tubeapp.models
 
 enum class FormatType(val format : String) {
     BEST("best"), // best video plus audio auto
