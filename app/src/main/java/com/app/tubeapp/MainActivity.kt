@@ -18,13 +18,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.app.tubeapp.models.DownloadProgress
-import com.app.tubeapp.models.YDownloader
-import com.yausername.ffmpeg.FFmpeg
+import com.app.tubeapp.models.MediaDownloadUtil
+import com.yausername.youtubedl_android.DownloadProgressCallback
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.activity_main.view.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -39,6 +36,7 @@ var downloadUrl: String? = null
 
 class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.DownloadCallback {
     // monitor permission for storage access
+    private var isDownloading = false
     private var permissionStatus = false
     private val TAG: String = this.javaClass.name
 
@@ -62,34 +60,13 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
         activityViewModel = MainActivityViewModel()
         lifecycle.addObserver(activityViewModel)
 
-        downloadUrl = if (catchVideoLink() != null) catchVideoLink() else ""
-
-        if (!downloadUrl.isNullOrEmpty()) {
-            val fragment = VideoDownloadFragment()
-            fragment.show(supportFragmentManager.beginTransaction(), "dialog")
+        CoroutineScope(Dispatchers.Default).launch {
+            downloadUrl = if (catchVideoLink() != null) catchVideoLink() else ""
         }
 
-        btnDownload.setOnClickListener {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), folderName)
-            } else {
-                if (permissionStatus) {
-                    youtubeDLDir = File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), folderName)
-                }
-            }
 
-            val fragment = VideoDownloadFragment()
-            fragment.show(supportFragmentManager.beginTransaction(), "dialog")
-        }
-
-        // update button to update youtube-dl
-        btnUpdate.setOnClickListener {
-            CoroutineScope(IO).launch {
-                YoutubeDL.getInstance().init(application)
-                FFmpeg.getInstance().init(application)
-                update()
-            }
-        }
+        val fragment = VideoDownloadFragment()
+        supportFragmentManager.beginTransaction().add(R.id.fragment_container, fragment).commit()
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -127,7 +104,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.setting) {
-            Toast.makeText(this, "hello", Toast.LENGTH_LONG)
+            Toast.makeText(this, "hello", Toast.LENGTH_LONG).show()
         }
         return super.onOptionsItemSelected(item)
     }
@@ -143,7 +120,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
      * Grab media url from other applications, using share button
      * @return: media url
      */
-    private fun catchVideoLink(): String? {
+    private suspend fun catchVideoLink(): String? {
         val extras = intent.extras
         return extras?.getString(Intent.EXTRA_TEXT)
     }
@@ -212,34 +189,34 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
         YoutubeDL.getInstance().updateYoutubeDL(application)
     }
 
-    override fun startDownload(){
-        val transaction = supportFragmentManager.beginTransaction()
-        transaction.remove(supportFragmentManager.findFragmentByTag("dialog")!!).commit()
-        CoroutineScope(IO).launch {
-//            activityViewModel.download(activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!.absolutePath)
-//            runOnUiThread {
-//                etaText.text = downloadProgress!!.progress.toString()
-//
-            CoroutineScope(IO).launch {
-                val request = YoutubeDLRequest(downloadUrl)
-                val dir = "${activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!.absolutePath}/youtube-dl/%(title)s.%(ext)s"
-                request.addOption("-o", dir)
-                val out = YoutubeDL.getInstance().execute(request) { progress, etaInSeconds ->
-                    runOnUiThread {
-                        etaText.text = progress.toString()
-                    }
-                }
-                Log.d("Error", out.err)
-            }
+    override fun startDownload() {
 
+        val job = CoroutineScope(IO).launch {
+            val request = YoutubeDLRequest(downloadUrl)
+            val dir = "${activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!.absolutePath}/youtube-dl/%(title)s.%(ext)s"
+            request.addOption("-o", dir)
+            MediaDownloadUtil.downloadVideoWithRequest(DownloadProgressCallback { progress, eta ->
+                isDownloading = true
+                if (isActive)
+                    CoroutineScope(Main).launch {
+                        val hour = eta / 3600
+                        val min = (eta % 3600) / 60
+                        val sec = eta % 60
+                        val timeString =
+                            String.format("%02d hr %02d min %02d sec remaining", hour, min, sec)
+
+//                        progressBar.progress = progress.toInt()
+//                        completed.text = progress.toString()
+//                        etaText.text = timeString
+                    }
+            }, request)
         }
     }
+}
 
 
 //    override fun onProgressUpdate(progress: Float, etaInSeconds: Long) {
-//        val hour = etaInSeconds / 3600
-//        val min = (etaInSeconds % 3600) / 60
-//        val sec = etaInSeconds % 60
+
 //
 //        val timeString =
 //            String.format("%02d hr %02d min %02d sec remaining", hour, min, sec)
@@ -250,6 +227,5 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
 //            etaText.text = timeString
 //        }
 //    }
-}
 
 

@@ -1,20 +1,18 @@
 package com.app.tubeapp.models
 
+import com.yausername.youtubedl_android.DownloadProgressCallback
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
-class YDownloader {
+class MediaDownloadUtil {
 
     companion object {
-        suspend fun downloadVideo(url: String) {
-            withContext(IO) {
-                val request = YoutubeDLRequest(url)
-                YoutubeDL.getInstance().execute(request).out
-            }
+        suspend fun downloadVideoWithRequest(progressCallback: DownloadProgressCallback, request: YoutubeDLRequest): String {
+            return YoutubeDL.getInstance().execute(request, progressCallback).out
+        }
+
+        suspend fun getVideoInfo(){
+
         }
     }
 
