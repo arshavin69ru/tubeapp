@@ -4,25 +4,25 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="#FFFFFF"
+    android:background="#252723"
     android:clickable="true"
     android:focusable="true"
-    android:visibility="gone">
+    android:visibility="visible">
 
-        <ProgressBar
-            android:id="@+id/vidFragProgress"
-            style="?android:attr/progressBarStyleLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:indeterminate="true" />
+    <ProgressBar
+        android:id="@+id/vidFragProgress"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminate="true" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:gravity="center"
-            android:text="Wait...fetching video details"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="#000000" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:text="Wait,fetching video details..."
+        android:textColor="#FFFFFF"
+        android:textSize="24sp" />
 </FrameLayout>

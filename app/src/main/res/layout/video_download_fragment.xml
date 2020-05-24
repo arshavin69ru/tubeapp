@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_alignParentTop="true"
     android:layout_height="match_parent"
-    tools:context=".VideoDownloadFragment">
+    tools:context=".ui.VideoDownloadFragment">
 
     <!--TextTitle-->
     <TextView

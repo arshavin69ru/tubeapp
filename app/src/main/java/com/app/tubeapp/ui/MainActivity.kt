@@ -1,4 +1,4 @@
-package com.app.tubeapp
+package com.app.tubeapp.ui
 
 import android.Manifest
 import android.app.Activity
@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.app.tubeapp.R
 import com.app.tubeapp.models.MediaDownloadUtil
 import com.yausername.youtubedl_android.DownloadProgressCallback
 import com.yausername.youtubedl_android.YoutubeDL
@@ -81,13 +82,19 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
                             getString(R.string.perm_storage_message)
                         ).setPositiveButton("OK") { dialog, _ ->
                             dialog.dismiss()
-                            requestPermissions(arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
+                            requestPermissions(
+                                arrayOf(PERMISSION_WRITE),
+                                STORAGE_REQUEST_CODE
+                            )
                         }.show()
                         permissionStatus = checkPermission()
 
                     }
                     else -> { // user didn't deny , just ask for permission
-                        requestPermissions(arrayOf(PERMISSION_WRITE), STORAGE_REQUEST_CODE)
+                        requestPermissions(
+                            arrayOf(PERMISSION_WRITE),
+                            STORAGE_REQUEST_CODE
+                        )
                         permissionStatus = checkPermission()
                     }
                 }

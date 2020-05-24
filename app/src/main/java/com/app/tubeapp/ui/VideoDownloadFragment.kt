@@ -1,4 +1,4 @@
-package com.app.tubeapp
+package com.app.tubeapp.ui
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
+import com.app.tubeapp.R
 import com.app.tubeapp.util.TubeApplication
 import com.bumptech.glide.Glide
 import com.yausername.youtubedl_android.mapper.VideoInfo

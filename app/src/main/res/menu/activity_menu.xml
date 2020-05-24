@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:id="@+id/setting"
-        android:title="Setting"
-        app:showAsAction="ifRoom"
-        android:titleCondensed="Setting" />
+    <item
+        android:id="@+id/setting"
+        android:title="Settings"
+        android:titleCondensed="Set" />
+    <item
+        android:id="@+id/update"
+        android:icon="@drawable/ic_baseline_update_24"
+        android:title="Update Binaries"
+        app:showAsAction="ifRoom" />
 </menu>

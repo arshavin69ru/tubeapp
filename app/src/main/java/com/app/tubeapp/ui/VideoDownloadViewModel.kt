@@ -1,4 +1,4 @@
-package com.app.tubeapp
+package com.app.tubeapp.ui
 
 import android.app.Application
 import android.content.Context

@@ -1,4 +1,4 @@
-package com.app.tubeapp
+package com.app.tubeapp.ui
 
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.ViewModel
