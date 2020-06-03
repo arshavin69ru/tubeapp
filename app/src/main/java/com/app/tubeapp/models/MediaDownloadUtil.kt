@@ -7,15 +7,10 @@ import com.yausername.youtubedl_android.YoutubeDLRequest
 class MediaDownloadUtil {
 
     companion object {
-        suspend fun downloadVideoWithRequest(progressCallback: DownloadProgressCallback, request: YoutubeDLRequest): String {
+        fun downloadVideoWithRequest(progressCallback: DownloadProgressCallback, request: YoutubeDLRequest): String {
             return YoutubeDL.getInstance().execute(request, progressCallback).out
         }
-
-        suspend fun getVideoInfo(){
-
-        }
     }
-
     enum class Options(val option: String) {
         FORMAT("-f"),
         OUTPUT("-o"),
@@ -26,7 +21,6 @@ class MediaDownloadUtil {
         GET_FILENAME("--get-filename"),
         GET_FORMAT("--get-format")
     }
-
     enum class FileNames(val title: String) {
         TITLE_EXT("%(title)s.%(ext)s"),
         TITLE_ID_EXT("%(title)s-%(id)s.%(ext)s")

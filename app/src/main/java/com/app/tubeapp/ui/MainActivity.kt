@@ -7,8 +7,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
@@ -19,29 +17,25 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.app.tubeapp.R
-import com.app.tubeapp.models.MediaDownloadUtil
-import com.yausername.youtubedl_android.DownloadProgressCallback
 import com.yausername.youtubedl_android.YoutubeDL
-import com.yausername.youtubedl_android.YoutubeDLRequest
-import kotlinx.coroutines.*
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.Dispatchers.Main
-import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val folderName = "youtube-dl"
 private const val STORAGE_REQUEST_CODE = 39
 private const val PICK_MEDIA_DIRECTORY = 55
 private const val SAVE_MEDIA = 58
 private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
-var downloadUrl: String? = null
+var downloadUrl : String? = null
 
 class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.DownloadCallback {
     // monitor permission for storage access
-    private var isDownloading = false
     private var permissionStatus = false
-    private val TAG: String = this.javaClass.name
+    //private val Tag: String = this.javaClass.name
 
-    private lateinit var youtubeDLDir: File
+    //private lateinit var youtubeDLDir: File
     private lateinit var selectedDir: Uri
     private lateinit var activityViewModel: MainActivityViewModel
     private lateinit var activity: MainActivity
@@ -52,11 +46,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
         setContentView(R.layout.activity_main)
 
         setSupportActionBar(findViewById(R.id.mainToolbar))
-
-        CoroutineScope(Dispatchers.Default).launch {
-            askPermissionIfNotAvailable()
-        }
-
         // add observers
         activityViewModel = MainActivityViewModel()
         lifecycle.addObserver(activityViewModel)
@@ -65,7 +54,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
             downloadUrl = if (catchVideoLink() != null) catchVideoLink() else ""
         }
 
-
+        // load fragment
         val fragment = VideoDownloadFragment()
         supportFragmentManager.beginTransaction().add(R.id.fragment_container, fragment).commit()
     }
@@ -175,9 +164,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
     }
 
     private fun readUri(uri: Uri?) {
-        Log.d(TAG, uri.toString())
         selectedDir = uri!!
-
     }
 
     override fun onRequestPermissionsResult(
@@ -192,47 +179,11 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
     }
 
     private fun update() {
-        Log.d(TAG, "updating youtube-dl")
         YoutubeDL.getInstance().updateYoutubeDL(application)
     }
 
     override fun startDownload() {
-
-        val job = CoroutineScope(IO).launch {
-            val request = YoutubeDLRequest(downloadUrl)
-            val dir = "${activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!.absolutePath}/youtube-dl/%(title)s.%(ext)s"
-            request.addOption("-o", dir)
-            MediaDownloadUtil.downloadVideoWithRequest(DownloadProgressCallback { progress, eta ->
-                isDownloading = true
-                if (isActive)
-                    CoroutineScope(Main).launch {
-                        val hour = eta / 3600
-                        val min = (eta % 3600) / 60
-                        val sec = eta % 60
-                        val timeString =
-                            String.format("%02d hr %02d min %02d sec remaining", hour, min, sec)
-
-//                        progressBar.progress = progress.toInt()
-//                        completed.text = progress.toString()
-//                        etaText.text = timeString
-                    }
-            }, request)
-        }
     }
 }
-
-
-//    override fun onProgressUpdate(progress: Float, etaInSeconds: Long) {
-
-//
-//        val timeString =
-//            String.format("%02d hr %02d min %02d sec remaining", hour, min, sec)
-//
-//        runOnUiThread {
-//            completed.text = "$progress% Done"
-//            progressBar.progress = progress.toInt()
-//            etaText.text = timeString
-//        }
-//    }
 
 

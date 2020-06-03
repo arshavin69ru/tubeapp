@@ -13,6 +13,7 @@ import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.YoutubeDLRequest
+import com.yausername.youtubedl_android.mapper.VideoFormat
 import com.yausername.youtubedl_android.mapper.VideoInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,19 +22,18 @@ import kotlinx.coroutines.withContext
 
 class VideoDownloadViewModel(application: Application) : AndroidViewModel(application), LifecycleObserver {
     // TODO: Implement the ViewModel
-
     private val TAG: String = javaClass.name
-
     private var videoInfo: MutableLiveData<VideoInfo>? = null
+    private var mediaData: MutableLiveData<String>? = null
 
     /**
      * Checks for internet connectivity on the device
      * @return true if internet is available, else false
      */
+
     private fun hasInternetConnection(): Boolean {
         val connectivity = getApplication<TubeApplication>().getSystemService(Context.CONNECTIVITY_SERVICE)
                 as ConnectivityManager
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val activeNetwork = connectivity.activeNetwork ?: return false
             val capabilities = connectivity.getNetworkCapabilities(activeNetwork) ?: return false
@@ -61,7 +61,6 @@ class VideoDownloadViewModel(application: Application) : AndroidViewModel(applic
         if (videoInfo == null) {
             videoInfo = MutableLiveData<VideoInfo>()
         }
-
         if (url.isNullOrEmpty())
             return null
         // launch a background task on another thread to get video info
@@ -74,6 +73,27 @@ class VideoDownloadViewModel(application: Application) : AndroidViewModel(applic
         return videoInfo
     }
 
+    /***
+     * gets video streaming link which can be played
+     * @param VideoInfo? pass video info to object for extraction of streaming url
+     * @return String?
+     */
+     fun getVideoUrl(videoInfo: VideoInfo?): String? {
+        val formats = (if (videoInfo?.formats != null) videoInfo.formats else null) ?: return null
+        for (fmt: VideoFormat in formats) {
+            if (fmt.formatId != null && fmt.formatId == videoInfo!!.formatId) {
+                return fmt.url
+            }
+        }
+        // fallback to mp4
+        // return first mp4 link
+        for (fmt in formats) {
+            if ("mp4" == fmt.ext)
+                return fmt.url
+        }
+        return null
+    }
+
     private suspend fun grabVideoData(urlString: String) {
         val dlRequest = YoutubeDLRequest(urlString)
         var info: VideoInfo? = null
@@ -82,6 +102,7 @@ class VideoDownloadViewModel(application: Application) : AndroidViewModel(applic
             withContext(Dispatchers.IO) {
                 try {
                     info = YoutubeDL.getInstance().getInfo(dlRequest)
+
                 } catch (ex: YoutubeDLException) {
                     Log.d("Exception", ex.message!!)
                 }

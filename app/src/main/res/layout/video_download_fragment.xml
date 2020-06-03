@@ -3,29 +3,27 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_alignParentTop="true"
     android:layout_height="match_parent"
+    android:layout_alignParentTop="true"
     tools:context=".ui.VideoDownloadFragment">
 
     <!--TextTitle-->
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/txtVidInfoHeader"
-        style="@style/CustomTextBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="sans-serif-condensed-medium"
         android:gravity="center_horizontal"
         android:text="Video Details"
-        android:textColor="#FF8BC34A"
         android:textSize="26sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <include layout="@layout/progress_overlay"/>
+    <include layout="@layout/progress_overlay" />
 
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/txtVidInfoTitle"
         style="@style/CustomTextBox"
         android:layout_width="0dp"
@@ -34,41 +32,44 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/txtVidInfoHeader" />
 
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/txtVidInfoExtraOne"
-        style="@style/CustomTextBox"
         android:layout_width="0dp"
-        android:text="ExtraOne"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:lines="4"
+        android:maxLines="6"
+        android:text="Description"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/txtVidInfoTitle" />
 
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/txtVidInfoExtraTwo"
         style="@style/CustomTextBox"
         android:layout_width="0dp"
-        android:text="ExtraTwo"
+        android:text="address"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/txtVidInfoExtraOne" />
 
-    <ImageView
+    <VideoView
         android:id="@+id/imgVidThumbnail"
         android:layout_width="0dp"
-        android:src="@mipmap/ic_launcher"
         android:layout_height="300dp"
         android:layout_margin="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/txtVidInfoExtraTwo" />
 
-
     <Button
         android:id="@+id/btnVidInfoDownload"
         style="@style/Widget.MaterialComponents.Button"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginRight="8dp"
         android:text="Download"
         android:textColor="#FFFFFF"
         android:textSize="20sp"
