@@ -3,29 +3,21 @@ package com.app.tubeapp.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.MediaController
 import android.widget.VideoView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.Observer
-import androidx.navigation.fragment.findNavController
 import com.app.tubeapp.R
 import com.app.tubeapp.util.TubeApplication
 import com.app.tubeapp.viewmodels.VideoDownloadViewModel
 import com.yausername.youtubedl_android.mapper.VideoInfo
-import kotlinx.android.synthetic.main.video_download_fragment.*
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -55,10 +47,8 @@ class VideoDownloadFragment : Fragment(), LifecycleOwner {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val navController = this.findNavController()
-        navController.navigate(R.id.videoDownloadFragment)
-        progressFrame = view.findViewById(R.id.progressBarHolder)
-        videoView = view.findViewById(R.id.imgVidThumbnail)
+//        progressFrame = view.findViewById(R.id.progressBarHolder)
+//        videoView = view.findViewById(R.id.imgVidThumbnail)
     }
 
     override fun onAttach(context: Context) {
@@ -79,6 +69,7 @@ class VideoDownloadFragment : Fragment(), LifecycleOwner {
 
       //  Log.d("DOWNLOAD URL", downloadUrl!!)
 
+        /*
         if (!downloadUrl.isNullOrEmpty()) {
             progressFrame!!.visibility = View.VISIBLE
             CoroutineScope(IO).launch {
@@ -106,10 +97,12 @@ class VideoDownloadFragment : Fragment(), LifecycleOwner {
                 }
             }
         }
+
+         */
     }
 
     private suspend fun getVideoData(viewModel: VideoDownloadViewModel) {
-        videoData = viewModel.getVideoInfo(downloadUrl, requireActivity().application)
+       // videoData = viewModel.getVideoInfo(downloadUrl, requireActivity().application)
     }
 
     private suspend fun getBitmap(urlString: String): Bitmap? {

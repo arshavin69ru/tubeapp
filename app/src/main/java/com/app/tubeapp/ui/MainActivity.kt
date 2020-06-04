@@ -26,7 +26,7 @@ private const val STORAGE_REQUEST_CODE = 39
 private const val PICK_MEDIA_DIRECTORY = 55
 private const val SAVE_MEDIA = 58
 private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
-var downloadUrl: String? = null
+
 
 class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.DownloadCallback {
     // monitor permission for storage access

@@ -8,5 +8,6 @@
         android:id="@+id/videoDownloadFragment"
         android:name="com.app.tubeapp.ui.VideoDownloadFragment"
         android:label="video_download_fragment"
-        tools:layout="@layout/video_download_fragment" />
+        tools:layout="@layout/video_download_fragment" >
+    </fragment>
 </navigation>
