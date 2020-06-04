@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.LifecycleOwner
 import com.app.tubeapp.R
+import com.app.tubeapp.viewmodels.VkLoginViewModel
 
 class VkLoginFragment : DialogFragment() , LifecycleOwner{
 

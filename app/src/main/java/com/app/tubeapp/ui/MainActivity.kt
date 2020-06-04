@@ -18,9 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.app.tubeapp.R
 import com.yausername.youtubedl_android.YoutubeDL
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val folderName = "youtube-dl"
@@ -28,35 +26,21 @@ private const val STORAGE_REQUEST_CODE = 39
 private const val PICK_MEDIA_DIRECTORY = 55
 private const val SAVE_MEDIA = 58
 private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
-var downloadUrl : String? = null
+var downloadUrl: String? = null
 
 class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.DownloadCallback {
     // monitor permission for storage access
     private var permissionStatus = false
-    //private val Tag: String = this.javaClass.name
 
-    //private lateinit var youtubeDLDir: File
+    //private val Tag: String = this.javaClass.name
     private lateinit var selectedDir: Uri
-    private lateinit var activityViewModel: MainActivityViewModel
     private lateinit var activity: MainActivity
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         setSupportActionBar(findViewById(R.id.mainToolbar))
-        // add observers
-        activityViewModel = MainActivityViewModel()
-        lifecycle.addObserver(activityViewModel)
-
-        CoroutineScope(Dispatchers.Default).launch {
-            downloadUrl = if (catchVideoLink() != null) catchVideoLink() else ""
-        }
-
-        // load fragment
-        val fragment = VideoDownloadFragment()
-        supportFragmentManager.beginTransaction().add(R.id.fragment_container, fragment).commit()
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -132,7 +116,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
             .setTitle(title)
             .setMessage(message)
     }
-
     /**
      * Pick a directory with system picker where we want to store the downloaded
      * media content.

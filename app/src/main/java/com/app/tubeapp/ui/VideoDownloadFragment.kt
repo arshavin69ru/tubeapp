@@ -1,7 +1,6 @@
 package com.app.tubeapp.ui
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -17,9 +16,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
+import androidx.navigation.fragment.findNavController
 import com.app.tubeapp.R
 import com.app.tubeapp.util.TubeApplication
-import com.bumptech.glide.Glide
+import com.app.tubeapp.viewmodels.VideoDownloadViewModel
 import com.yausername.youtubedl_android.mapper.VideoInfo
 import kotlinx.android.synthetic.main.video_download_fragment.*
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URI
 import java.net.URL
 import java.net.URLConnection
 
@@ -37,8 +36,9 @@ class VideoDownloadFragment : Fragment(), LifecycleOwner {
     private var videoData: LiveData<VideoInfo>? = null
     private var progressFrame: FrameLayout? = null
     private var downloadCallback: DownloadCallback? = null
-    private lateinit var videoView : VideoView
+    private lateinit var videoView: VideoView
     private lateinit var urlData: String
+
     companion object {
         fun newInstance() = Fragment()
     }
@@ -49,10 +49,16 @@ class VideoDownloadFragment : Fragment(), LifecycleOwner {
         savedInstanceState: Bundle?
     ): View? {
 
-        val view = inflater.inflate(R.layout.video_download_fragment, container, false)
+        return inflater.inflate(R.layout.video_download_fragment, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val navController = this.findNavController()
+        navController.navigate(R.id.videoDownloadFragment)
         progressFrame = view.findViewById(R.id.progressBarHolder)
         videoView = view.findViewById(R.id.imgVidThumbnail)
-        return view
     }
 
     override fun onAttach(context: Context) {
@@ -71,7 +77,7 @@ class VideoDownloadFragment : Fragment(), LifecycleOwner {
 
         lifecycle.addObserver(viewModel)
 
-        Log.d("DOWNLOAD URL" , downloadUrl!!)
+      //  Log.d("DOWNLOAD URL", downloadUrl!!)
 
         if (!downloadUrl.isNullOrEmpty()) {
             progressFrame!!.visibility = View.VISIBLE
@@ -84,9 +90,9 @@ class VideoDownloadFragment : Fragment(), LifecycleOwner {
                         txtVidInfoTitle.text = it.title
                         txtVidInfoExtraOne.text = it.description
                         txtVidInfoExtraTwo.text = it.webpageUrl
-                    //    Glide.with(activity!!).load(it.thumbnail).into(imgVidThumbnail)
+                        //    Glide.with(activity!!).load(it.thumbnail).into(imgVidThumbnail)
                         val vidUrl = viewModel.getVideoUrl(it)
-                        if(vidUrl != null) videoView.setVideoURI(Uri.parse(vidUrl))
+                        if (vidUrl != null) videoView.setVideoURI(Uri.parse(vidUrl))
                         val controller = MediaController(activity)
                         videoView.setMediaController(controller)
 
@@ -103,7 +109,7 @@ class VideoDownloadFragment : Fragment(), LifecycleOwner {
     }
 
     private suspend fun getVideoData(viewModel: VideoDownloadViewModel) {
-        videoData = viewModel.getVideoInfo(downloadUrl, activity!!.application)
+        videoData = viewModel.getVideoInfo(downloadUrl, requireActivity().application)
     }
 
     private suspend fun getBitmap(urlString: String): Bitmap? {

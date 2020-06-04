@@ -1,4 +1,4 @@
-package com.app.tubeapp.ui
+package com.app.tubeapp.viewmodels
 
 import android.app.Application
 import android.content.Context
