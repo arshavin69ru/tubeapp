@@ -7,9 +7,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import android.widget.Toast
+import android.util.Log
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -17,7 +16,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.app.tubeapp.R
-import com.yausername.youtubedl_android.YoutubeDL
+import com.app.tubeapp.viewmodels.SharedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -28,19 +27,20 @@ private const val SAVE_MEDIA = 58
 private const val PERMISSION_WRITE = Manifest.permission.WRITE_EXTERNAL_STORAGE
 
 
-class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.DownloadCallback {
+class MainActivity : AppCompatActivity(), LifecycleOwner {
     // monitor permission for storage access
     private var permissionStatus = false
 
-    //private val Tag: String = this.javaClass.name
+    private val tag: String = this.javaClass.name
     private lateinit var selectedDir: Uri
     private lateinit var activity: MainActivity
-
+    private val sharedViewModel: SharedViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.mainToolbar))
+        Log.i(tag, "main onCreate Start")
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -77,32 +77,11 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.activity_menu, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.setting) {
-            Toast.makeText(this, "hello", Toast.LENGTH_LONG).show()
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     /**
      * check for permission on android M+
      */
     private fun checkPermission(): Boolean {
         return ContextCompat.checkSelfPermission(this, PERMISSION_WRITE) == PackageManager.PERMISSION_GRANTED
-    }
-
-    /**
-     * Grab media url from other applications, using share button
-     * @return: media url
-     */
-    private suspend fun catchVideoLink(): String? {
-        val extras = intent.extras
-        return extras?.getString(Intent.EXTRA_TEXT)
     }
 
     /**
@@ -116,6 +95,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
             .setTitle(title)
             .setMessage(message)
     }
+
     /**
      * Pick a directory with system picker where we want to store the downloaded
      * media content.
@@ -125,7 +105,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
         // intent.addCategory(Intent.CATEGORY_OPENABLE)
         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         startActivityForResult(intent, PICK_MEDIA_DIRECTORY)
-
     }
 
 
@@ -159,13 +138,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner, VideoDownloadFragment.
         if (requestCode == STORAGE_REQUEST_CODE) {
             permissionStatus = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
         }
-    }
-
-    private fun update() {
-        YoutubeDL.getInstance().updateYoutubeDL(application)
-    }
-
-    override fun startDownload() {
     }
 }
 

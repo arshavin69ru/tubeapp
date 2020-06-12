@@ -9,5 +9,19 @@
         android:name="com.app.tubeapp.ui.VideoDownloadFragment"
         android:label="video_download_fragment"
         tools:layout="@layout/video_download_fragment" >
+        <action
+            android:id="@+id/action_videoDownloadFragment_to_downloadDialogFragment"
+            app:destination="@id/downloadDialogFragment" />
     </fragment>
+    <dialog
+        android:id="@+id/downloadDialogFragment"
+        android:name="com.app.tubeapp.ui.DownloadDialogFragment"
+        android:label="fragment_download_dialog"
+        tools:layout="@layout/fragment_download_dialog" >
+        <argument
+            android:name="formatListData"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </dialog>
 </navigation>

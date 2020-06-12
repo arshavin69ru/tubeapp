@@ -3,8 +3,8 @@
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
         <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
@@ -15,21 +15,51 @@
         <item name="android:layout_height">wrap_content</item>
     </style>
 
+    <!-- Define your custom dialog theme here extending from base -->
+
+    <style name="AppDialogTheme" parent="Theme.AppCompat.Light.Dialog">
+
+        <!-- Define color properties as desired -->
+
+        <item name="colorPrimary">@color/colorPrimary</item>
+
+        <item name="colorPrimaryDark">#000</item>
+
+        <item name="android:textColorHighlight">@color/colorPrimaryDark</item>
+
+        <item name="colorAccent">@color/colorPrimary</item>
+
+        <item name="colorControlNormal">@color/colorPrimaryDark</item>
+
+        <!-- Define window properties as desired -->
+
+        <item name="android:windowNoTitle">false</item>
+
+        <item name="android:windowFullscreen">false</item>
+
+        <item name="android:windowBackground">@color/colorAccent</item>
+
+        <item name="android:windowIsFloating">true</item>
+
+        <item name="android:windowCloseOnTouchOutside">true</item>
+
+    </style>
+
     <style name="MaterialButton" parent="Widget.MaterialComponents.Button">
         <item name="android:textSize">20sp</item>
         <item name="android:textColor">#FFFFFF</item>
     </style>
 
-    <style name="MyToolbarTheme" parent="ThemeOverlay.MaterialComponents.Light">
+    <style name="MyToolbarTheme" parent="Theme.MaterialComponents.NoActionBar">
         <item name="android:textColorSecondary">#FFFFFF</item>
         <item name="android:textColor">#FFFFFF</item>
     </style>
 
     <!-- Set parent theme as app theme. full screen dialog -->
-<!--    <style name="DialogTheme" parent="AppTheme">-->
-<!--        <item name="android:windowNoTitle">true</item>-->
-<!--        <item name="android:windowFullscreen">false</item>-->
-<!--        <item name="android:windowIsFloating">false</item>-->
-<!--    </style>-->
+    <!--    <style name="DialogTheme" parent="AppTheme">-->
+    <!--        <item name="android:windowNoTitle">true</item>-->
+    <!--        <item name="android:windowFullscreen">false</item>-->
+    <!--        <item name="android:windowIsFloating">false</item>-->
+    <!--    </style>-->
 
 </resources>

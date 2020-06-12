@@ -1,128 +1,171 @@
 package com.app.tubeapp.ui
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
+import android.view.*
+import android.widget.Toast
 import android.widget.VideoView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LifecycleOwner
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
+import androidx.navigation.findNavController
 import com.app.tubeapp.R
-import com.app.tubeapp.util.TubeApplication
-import com.app.tubeapp.viewmodels.VideoDownloadViewModel
-import com.yausername.youtubedl_android.mapper.VideoInfo
+import com.app.tubeapp.models.CustomVideoInfo
+import com.app.tubeapp.viewmodels.SharedViewModel
+import com.yausername.youtubedl_android.DownloadProgressCallback
+import kotlinx.android.synthetic.main.video_download_fragment.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.withContext
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLConnection
+import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.launch
+import java.io.File
 
-class VideoDownloadFragment : Fragment(), LifecycleOwner {
-    private var videoData: LiveData<VideoInfo>? = null
-    private var progressFrame: FrameLayout? = null
-    private var downloadCallback: DownloadCallback? = null
+class VideoDownloadFragment : Fragment() {
+
+    private val tagName: String = javaClass.simpleName
     private lateinit var videoView: VideoView
-    private lateinit var urlData: String
+    private val sharedViewModel: SharedViewModel by activityViewModels()
+    private lateinit var urlLiveData: LiveData<String>
+    private var customVideoInfo: CustomVideoInfo? = null
 
-    companion object {
-        fun newInstance() = Fragment()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d(tagName, "fragment $tagName onCreate() start")
+        super.onCreate(savedInstanceState)
+        // set options menu for fragment
+        setHasOptionsMenu(true)
+        lifecycle.addObserver(sharedViewModel)
+        urlLiveData = sharedViewModel.getVideoGrabLink()!!
+
+        // set live data
+        sharedViewModel.setVideoGrabLink(activity?.intent?.extras?.getString(Intent.EXTRA_TEXT))
+        Log.d(tagName, "fragment $tagName onCreate() end")
     }
 
-    private lateinit var viewModel: VideoDownloadViewModel
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-
+        Log.d(tagName, "fragment $tagName onCreateView() start")
         return inflater.inflate(R.layout.video_download_fragment, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        Log.d(tagName, "fragment $tagName onViewCreated() start")
         super.onViewCreated(view, savedInstanceState)
-
-//        progressFrame = view.findViewById(R.id.progressBarHolder)
-//        videoView = view.findViewById(R.id.imgVidThumbnail)
-    }
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        try {
-            downloadCallback = activity as DownloadCallback
-        } catch (ce: ClassCastException) {
-            Log.d("ClassCastException", "thrown")
-        }
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-
-        viewModel = VideoDownloadViewModel(TubeApplication())
-
-        lifecycle.addObserver(viewModel)
-
-      //  Log.d("DOWNLOAD URL", downloadUrl!!)
-
-        /*
-        if (!downloadUrl.isNullOrEmpty()) {
-            progressFrame!!.visibility = View.VISIBLE
-            CoroutineScope(IO).launch {
-
-                getVideoData(viewModel)
-
-                withContext(Main) {
-                    videoData?.observe(viewLifecycleOwner, Observer {
-                        txtVidInfoTitle.text = it.title
-                        txtVidInfoExtraOne.text = it.description
-                        txtVidInfoExtraTwo.text = it.webpageUrl
-                        //    Glide.with(activity!!).load(it.thumbnail).into(imgVidThumbnail)
-                        val vidUrl = viewModel.getVideoUrl(it)
-                        if (vidUrl != null) videoView.setVideoURI(Uri.parse(vidUrl))
-                        val controller = MediaController(activity)
-                        videoView.setMediaController(controller)
-
+        videoView = view.findViewById(R.id.videoPreview)
+        sharedViewModel.initYoutubeDL()
+        sharedViewModel.getVideoGrabLink()?.observe(viewLifecycleOwner, Observer {
+            val job = CoroutineScope(IO).launch {
+                customVideoInfo = sharedViewModel.getVideoInfo(it)
+            }
+            job.invokeOnCompletion {
+                CoroutineScope(Dispatchers.Main).launch {
+                    customVideoInfo?.videoInfo?.apply {
+                        txtVidInfoTitle.text = title
+                        txtVidInfoExtraOne.text = description
+                        txtVidInfoExtraTwo.text = webpageUrl
+                    }
+                    customVideoInfo?.getPlayableUrl()?.apply {
+                        videoView.setVideoURI(Uri.parse(this))
                         videoView.start()
-                        progressFrame!!.visibility = View.GONE
-                    })
-
-                    btnVidInfoDownload.setOnClickListener {
-                        downloadCallback?.startDownload()
                     }
                 }
             }
-        }
+            btnVidInfoDownload.setOnClickListener {
+                val navController = view.findNavController()
+                val list = ArrayList<String>()
+                for (data in customVideoInfo?.videoInfo?.formats!!) {
+                    list.add(data.format)
+                }
+                sharedViewModel.setVideoFormatsList(list)
+                navController.navigate(R.id.downloadDialogFragment)
+            }
+        })
 
-         */
+
+        sharedViewModel.getSelection()?.observe(viewLifecycleOwner, Observer {
+            val path = File(activity?.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "youtube-dl")
+            Log.d("Format", sharedViewModel.getSelection()?.value!!)
+
+            CoroutineScope(IO).launch {
+                sharedViewModel.download(
+                    urlLiveData.value,
+                    sharedViewModel.getSelection()?.value!!,
+                    path,
+                    DownloadProgressCallback { progress, etaInSeconds ->
+                        Log.d("progress", progress.toString())
+                        Log.d("ETA", etaInSeconds.toString())
+                        launch(Main) {
+                            Toast.makeText(context, "Downloading progress $progress ETA: $etaInSeconds", Toast.LENGTH_LONG).show()
+                        }
+                    })
+            }
+        })
     }
 
-    private suspend fun getVideoData(viewModel: VideoDownloadViewModel) {
-       // videoData = viewModel.getVideoInfo(downloadUrl, requireActivity().application)
+    override fun onPause() {
+        super.onPause()
+        Log.d(tagName, "onPause()")
     }
 
-    private suspend fun getBitmap(urlString: String): Bitmap? {
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d(tagName, "onDestroy()")
+    }
 
-        withContext(IO) {
-            try {
-                val options = BitmapFactory.Options()
-                options.inJustDecodeBounds = true
-                val con: URLConnection = URL(urlString).openConnection() as HttpURLConnection
-                con.doInput = true
-                Log.d("Stream", con.toString())
-                return@withContext BitmapFactory.decodeStream(con.getInputStream(), null, options)
-            } catch (e: IOException) {
-                Log.d("BITMAP", e.message!!)
+    override fun onStop() {
+        super.onStop()
+        Log.d(tagName, "onStop()")
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        Log.d(tagName, "onViewDestroy()")
+    }
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+        Log.d(tagName, "onViewStateRestored()")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d(tagName, "onResume()")
+
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        Log.d(tagName, "onDetach()")
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        Log.d(tagName, "fragment $tagName onCreateOptionsMenu() start")
+        inflater.inflate(R.menu.activity_menu, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        Log.d(tagName, "fragment $tagName onOptionsItemSelected() start")
+        if (item.itemId == R.id.setting) {
+            Toast.makeText(activity, "settings", Toast.LENGTH_LONG).show()
+        } else if (item.itemId == R.id.update) {
+            Toast.makeText(activity, "updating", Toast.LENGTH_LONG).show()
+            CoroutineScope(IO).launch {
+                sharedViewModel.update(activity?.application!!)
             }
         }
-        return null
+        return super.onOptionsItemSelected(item)
     }
 
-    interface DownloadCallback {
-        fun startDownload()
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        Log.d(tagName, "fragment $tagName onActivityCreated() start")
+        super.onActivityCreated(savedInstanceState)
     }
 }
+

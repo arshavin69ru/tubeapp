@@ -15,22 +15,31 @@ import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import com.yausername.youtubedl_android.mapper.VideoFormat
 import com.yausername.youtubedl_android.mapper.VideoInfo
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class VideoDownloadViewModel(application: Application) : AndroidViewModel(application), LifecycleObserver {
     // TODO: Implement the ViewModel
-    private val TAG: String = javaClass.name
-    private var videoInfo: MutableLiveData<VideoInfo>? = null
-    private var mediaData: MutableLiveData<String>? = null
+    var downloadUrl: String? = null
+    private val tagName: String = javaClass.name
+    var mediaGrabLink : MutableLiveData<String>? = null
+    var videoInfo: MutableLiveData<VideoInfo>? = null
+    //private var mediaData: MutableLiveData<String>? = null
 
     /**
      * Checks for internet connectivity on the device
      * @return true if internet is available, else false
      */
 
+//    private suspend fun getVideoData(viewModel: VideoDownloadViewModel, url: String) {
+//        videoData = viewModel.getVideoInfo(url, requireActivity().application)
+//    }
+
+
+    /**
+     * Check for internet connectivity
+     * @return whether an active connection to internet is available
+     */
     private fun hasInternetConnection(): Boolean {
         val connectivity = getApplication<TubeApplication>().getSystemService(Context.CONNECTIVITY_SERVICE)
                 as ConnectivityManager
@@ -56,29 +65,50 @@ class VideoDownloadViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun getVideoInfo(url: String?, application: Application): LiveData<VideoInfo>? {
+    fun getMediaLink(){
+        if(mediaGrabLink == null) mediaGrabLink = MutableLiveData()
+
+        if(downloadUrl != null) mediaGrabLink?.value = downloadUrl
+    }
+
+    /**
+     * get instance of youtube-dl and ffmpeg, must be called before
+     * doing using either objects, else it will throw null pointer exception.
+     * @param application an instance of application
+     */
+    fun initialize(application: Application) {
+        YoutubeDL.getInstance().init(application)
+        FFmpeg.getInstance().init(application)
+    }
+
+    /**
+     * update the youtube-dl binary
+     * @param application
+     */
+    suspend fun update(application: Application) {
+        YoutubeDL.getInstance().updateYoutubeDL(application)
+    }
+
+    fun getVideoInfo(url: String?, application: Application) {
         // if mutable data object is null initialize it
+        if (url.isNullOrEmpty())
+            return
         if (videoInfo == null) {
             videoInfo = MutableLiveData<VideoInfo>()
         }
-        if (url.isNullOrEmpty())
-            return null
+
         // launch a background task on another thread to get video info
-        viewModelScope.launch {
-            // init youtube
-            YoutubeDL.getInstance().init(application)
-            FFmpeg.getInstance().init(application)
-            grabVideoData(url)
+        viewModelScope.launch(Dispatchers.IO) {
+            videoInfo?.postValue(grabVideoData(url))
         }
-        return videoInfo
     }
 
     /***
      * gets video streaming link which can be played
-     * @param VideoInfo? pass video info to object for extraction of streaming url
-     * @return String?
+     * @param: info pass video info to object for extraction of streaming url
+     * @return: playable url string
      */
-     fun getVideoUrl(videoInfo: VideoInfo?): String? {
+    fun getVideoUrl(videoInfo: VideoInfo?): String? {
         val formats = (if (videoInfo?.formats != null) videoInfo.formats else null) ?: return null
         for (fmt: VideoFormat in formats) {
             if (fmt.formatId != null && fmt.formatId == videoInfo!!.formatId) {
@@ -94,21 +124,18 @@ class VideoDownloadViewModel(application: Application) : AndroidViewModel(applic
         return null
     }
 
-    private suspend fun grabVideoData(urlString: String) {
+    private suspend fun grabVideoData(urlString: String): VideoInfo? {
         val dlRequest = YoutubeDLRequest(urlString)
         var info: VideoInfo? = null
-
-        CoroutineScope(Dispatchers.IO).launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    info = YoutubeDL.getInstance().getInfo(dlRequest)
-
-                } catch (ex: YoutubeDLException) {
-                    Log.d("Exception", ex.message!!)
-                }
-            }
-        }.invokeOnCompletion {
-            videoInfo?.postValue(info)
+        try {
+            return YoutubeDL.getInstance().getInfo(dlRequest)
+        } catch (ex: YoutubeDLException) {
+            Log.d("Exception", ex.message!!)
         }
+        return null
+    }
+
+    suspend fun download(application: Application) {
+
     }
 }

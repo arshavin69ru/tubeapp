@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.appbar.MaterialToolbar xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mainToolbar"
     android:layout_width="match_parent"
-    android:minHeight="?attr/actionBarSize"
     android:layout_height="wrap_content"
-    android:background="?attr/colorPrimary"
+    android:background="@color/colorPrimary"
     android:elevation="4dp"
-    app:titleTextColor="#FFFFFF"
-    app:popupTheme="@style/ThemeOverlay.AppCompat.Dark"
+    android:minHeight="?attr/actionBarSize"
     android:theme="@style/MyToolbarTheme"
-    android:id="@+id/mainToolbar">
-</com.google.android.material.appbar.MaterialToolbar>
+    app:popupTheme="@style/ThemeOverlay.AppCompat.Dark"
+    app:titleTextColor="#FFFFFF"></com.google.android.material.appbar.MaterialToolbar>
