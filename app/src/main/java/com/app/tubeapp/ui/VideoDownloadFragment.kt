@@ -1,9 +1,11 @@
 package com.app.tubeapp.ui
 
+import android.content.ContentValues
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.view.*
 import android.widget.Toast
@@ -24,6 +26,8 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class VideoDownloadFragment : Fragment() {
 
@@ -32,6 +36,7 @@ class VideoDownloadFragment : Fragment() {
     private val sharedViewModel: SharedViewModel by activityViewModels()
     private lateinit var urlLiveData: LiveData<String>
     private var customVideoInfo: CustomVideoInfo? = null
+    private lateinit var filename : String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(tagName, "fragment $tagName onCreate() start")
@@ -90,20 +95,34 @@ class VideoDownloadFragment : Fragment() {
 
         sharedViewModel.getSelection()?.observe(viewLifecycleOwner, Observer {
             val path = File(activity?.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "youtube-dl")
-            Log.d("Format", sharedViewModel.getSelection()?.value!!)
 
+            Log.d("Format", sharedViewModel.getSelection()?.value!!)
             CoroutineScope(IO).launch {
                 sharedViewModel.download(
                     urlLiveData.value,
                     sharedViewModel.getSelection()?.value!!,
                     path,
                     DownloadProgressCallback { progress, etaInSeconds ->
+
                         Log.d("progress", progress.toString())
                         Log.d("ETA", etaInSeconds.toString())
                         launch(Main) {
                             Toast.makeText(context, "Downloading progress $progress ETA: $etaInSeconds", Toast.LENGTH_LONG).show()
                         }
                     })
+            }.invokeOnCompletion {
+                val resolver = requireActivity().applicationContext.contentResolver
+                val newVideo = ContentValues().apply {
+                    put(MediaStore.Video.Media.DISPLAY_NAME, txtVidInfoTitle.text.toString())
+                    put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                }
+                val file = File(path, txtVidInfoTitle.text.toString())
+
+                val newURI= resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, newVideo)
+                val fos = resolver.openOutputStream(newURI!!)
+                fos?.write(FileInputStream(file).readBytes())
+                file.delete()
+                fos?.close()
             }
         })
     }

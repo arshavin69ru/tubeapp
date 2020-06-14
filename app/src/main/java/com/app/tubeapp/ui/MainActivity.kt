@@ -15,8 +15,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.Navigation
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.NavigationUI
 import com.app.tubeapp.R
 import com.app.tubeapp.viewmodels.SharedViewModel
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -40,7 +46,12 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.mainToolbar))
-        Log.i(tag, "main onCreate Start")
+
+        val bottomNavView= findViewById<BottomNavigationView>(R.id.bottom_nav)
+        val navController = findNavController(R.id.nav_host_fragment)
+        //val navController =  Navigation.findNavController(this, R.id.nav_host_fragment)
+        NavigationUI.setupWithNavController(bottomNavView, navController)
+
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -83,6 +94,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
     private fun checkPermission(): Boolean {
         return ContextCompat.checkSelfPermission(this, PERMISSION_WRITE) == PackageManager.PERMISSION_GRANTED
     }
+
 
     /**
      * show alert dialog for permission
